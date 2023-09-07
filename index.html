@@ -37,25 +37,11 @@
                     const audioURL = URL.createObjectURL(audioBlob);
                     audioPlayback.src = audioURL;
 
-                    // Upload the audioBlob to S3
-                    const s3 = new AWS.S3({
-                        
-                    });
-
-                    const params = {
-                        Bucket: 'haink-bucket', // Replace with your bucket name
-                        Key: 'audio.wav',
-                        Body: audioBlob,
-                        ContentType: 'audio/wav'
-                    };
-
-                    s3.upload(params, (err, data) => {
-                        if (err) {
-                            console.error('Error uploading audio to S3:', err);
-                        } else {
-                            console.log('Audio uploaded to S3 successfully:', data.Location);
-                        }
-                    });
+                    const audioData = await audioBlob.arrayBuffer(); // Convert Blob to ArrayBuffer
+                    const base64Data = btoa(String.fromCharCode(...new Uint8Array(audioData))); // Convert to base64
+                    
+                    // Send data to Lambda function
+                    sendDataToLambda(base64Data);
                 };
 
                 mediaRecorder.start();
@@ -72,6 +58,21 @@
                 startButton.disabled = false;
                 stopButton.disabled = true;
             }
+        }
+
+        function sendDataToLambda(data) {
+            const endpointUrl = "https://aj1vx80g67.execute-api.us-east-2.amazonaws.com"; // Replace with your API Gateway endpoint URL
+            const lambdaPayload = {
+                audioData: data
+            };
+
+            fetch(endpointUrl, {
+                method: "POST",
+                body: JSON.stringify(lambdaPayload)
+            })
+            .then(response => response.json())
+            .then(data => console.log(data))
+            .catch(error => console.error("Error sending data to Lambda:", error));
         }
     </script>
 </body>
