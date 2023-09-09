@@ -2,78 +2,56 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Audio Recorder</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HAINK</title>
 </head>
 <body>
-    <h1>Audio Recorder</h1>
-    <button id="startRecord">Start Recording</button>
-    <button id="stopRecord" disabled>Stop Recording</button>
-    <audio controls id="audioPlayback"></audio>
+    <button id="recordButton">Record</button>
+    <button id="stopButton" disabled>Stop</button>
+    <audio id="audio" controls></audio>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/aws-sdk/2.1077.0/aws-sdk.min.js"></script>
     <script>
-        const startButton = document.getElementById("startRecord");
-        const stopButton = document.getElementById("stopRecord");
-        const audioPlayback = document.getElementById("audioPlayback");
         let mediaRecorder;
         let audioChunks = [];
 
-        startButton.addEventListener("click", startRecording);
-        stopButton.addEventListener("click", stopRecording);
+        document.getElementById('recordButton').addEventListener('click', startRecording);
+        document.getElementById('stopButton').addEventListener('click', stopRecording);
 
-        async function startRecording() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
-
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0) {
-                        audioChunks.push(event.data);
-                    }
-                };
-
-                mediaRecorder.onstop = async () => {
-                    const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                    const audioURL = URL.createObjectURL(audioBlob);
-                    audioPlayback.src = audioURL;
-
-                    const reader = new FileReader();
-                    reader.onload = function () {
-                        const base64Data = reader.result.split(',')[1];
-                        sendDataToLambda(base64Data);
-                    }
-                    reader.readAsDataURL(audioBlob);
-                };
-
-                mediaRecorder.start();
-                startButton.disabled = true;
-                stopButton.disabled = false;
-            } catch (error) {
-                console.error("Error starting recording:", error);
-            }
+        function startRecording() {
+            navigator.mediaDevices.getUserMedia({ audio: true })
+                .then(stream => {
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = event => audioChunks.push(event.data);
+                    mediaRecorder.onstop = exportAudio;
+                    mediaRecorder.start();
+                    document.getElementById('recordButton').disabled = true;
+                    document.getElementById('stopButton').disabled = false;
+                })
+                .catch(console.error);
         }
 
         function stopRecording() {
-            if (mediaRecorder && mediaRecorder.state === "recording") {
-                mediaRecorder.stop();
-                startButton.disabled = false;
-                stopButton.disabled = true;
-            }
+            mediaRecorder.stop();
+            document.getElementById('recordButton').disabled = false;
+            document.getElementById('stopButton').disabled = true;
         }
 
-        function sendDataToLambda(data) {
-            const endpointUrl = "https://ddy2bu7op3.execute-api.us-east-2.amazonaws.com/production1/audio"; // Replace with your API Gateway endpoint URL
-            const lambdaPayload = {
-                audioData: data
-            };
+        function exportAudio() {
+            const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const audioElement = document.getElementById('audio');
+            audioElement.src = audioUrl;
 
-            fetch(endpointUrl, {
-                method: "POST",
-                body: JSON.stringify(lambdaPayload)
+            const formData = new FormData();
+            formData.append('audio', audioBlob, 'audio.wav');
+
+            fetch('https://ddy2bu7op3.execute-api.us-east-2.amazonaws.com/production1/audio', {
+                method: 'POST',
+                body: formData
             })
             .then(response => response.json())
             .then(data => console.log(data))
-            .catch(error => console.error("Error sending data to Lambda:", error));
+            .catch(error => console.error('Error:', error));
         }
     </script>
 </body>
