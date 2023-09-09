@@ -40,6 +40,19 @@
             a.href = url;
             a.download = 'recording.wav';
             a.style.display = 'block';
+
+            // Send recording to AWS API
+            const apiUrl = 'https://ddy2bu7op3.execute-api.us-east-2.amazonaws.com/production1/audio';
+            const formData = new FormData();
+            formData.append('audio', blob, 'recording.wav');
+
+            fetch(apiUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => console.log('Response from AWS Lambda:', data))
+            .catch(error => console.error('Error sending recording to AWS:', error));
         }
     </script>
 </body>
