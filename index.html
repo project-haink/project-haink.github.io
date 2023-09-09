@@ -35,11 +35,16 @@
 
         function saveRecording() {
             const blob = new Blob(chunks, { type: 'audio/wav' });
+            const url = URL.createObjectURL(blob);
+            const a = document.getElementById('downloadLink');
+            a.href = url;
+            a.download = 'recording.wav';
+            a.style.display = 'block';
 
-            // Send recording to AWS API
+            // Send recording to AWS Lambda
             const apiUrl = 'https://ddy2bu7op3.execute-api.us-east-2.amazonaws.com/production1/audio';
             const formData = new FormData();
-            formData.append('audio', blob, 'audio.wav');
+            formData.append('audio', blob, 'recording.wav');
 
             fetch(apiUrl, {
                 method: 'POST',
