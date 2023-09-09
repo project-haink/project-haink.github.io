@@ -41,14 +41,24 @@
             a.download = 'recording.wav';
             a.style.display = 'block';
 
-            // Send recording to AWS API
+            // Convert audio blob to Base64
+            const reader = new FileReader();
+            reader.onload = function() {
+                const base64Data = reader.result.split(',')[1]; // Get the Base64 data part
+                sendToAwsLambda(base64Data);
+            };
+            reader.readAsDataURL(blob);
+        }
+
+        function sendToAwsLambda(base64Data) {
             const apiUrl = 'https://ddy2bu7op3.execute-api.us-east-2.amazonaws.com/production1/audio';
-            const formData = new FormData();
-            formData.append('audio', blob, 'recording.wav');
 
             fetch(apiUrl, {
                 method: 'POST',
-                body: formData
+                body: JSON.stringify({ audio: base64Data }),
+                headers: {
+                    'Content-Type': 'application/json',
+                },
             })
             .then(response => response.json())
             .then(data => console.log('Response from AWS Lambda:', data))
