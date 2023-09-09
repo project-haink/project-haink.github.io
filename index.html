@@ -23,7 +23,6 @@
 
             mediaRecorder.addEventListener('stop', () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                const audioUrl = URL.createObjectURL(audioBlob);
                 sendDataToLambda(audioBlob);
             });
 
@@ -42,7 +41,10 @@
             try {
                 const response = await fetch(url, {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    headers: {
+                        'Content-Type': 'audio/wav'
+                    }
                 });
 
                 if (response.ok) {
