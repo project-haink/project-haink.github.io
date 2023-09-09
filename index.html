@@ -16,7 +16,6 @@
         const stopButton = document.getElementById("stopRecord");
         const audioPlayback = document.getElementById("audioPlayback");
         let mediaRecorder;
-        let audioContext;
         let audioChunks = [];
 
         startButton.addEventListener("click", startRecording);
@@ -25,9 +24,7 @@
         async function startRecording() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const source = audioContext.createMediaStreamSource(stream);
-                mediaRecorder = new MediaRecorder(source);
+                mediaRecorder = new MediaRecorder(stream);
 
                 mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
@@ -59,7 +56,6 @@
         function stopRecording() {
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
-                audioContext.close(); // Release the audio context
                 startButton.disabled = false;
                 stopButton.disabled = true;
             }
