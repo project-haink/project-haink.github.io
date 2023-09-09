@@ -16,6 +16,7 @@
         const stopButton = document.getElementById("stopRecord");
         const audioPlayback = document.getElementById("audioPlayback");
         let mediaRecorder;
+        let audioContext;
         let audioChunks = [];
 
         startButton.addEventListener("click", startRecording);
@@ -24,7 +25,9 @@
         async function startRecording() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                mediaRecorder = new MediaRecorder(stream);
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                const source = audioContext.createMediaStreamSource(stream);
+                mediaRecorder = new MediaRecorder(source);
 
                 mediaRecorder.ondataavailable = (event) => {
                     if (event.data.size > 0) {
@@ -37,11 +40,12 @@
                     const audioURL = URL.createObjectURL(audioBlob);
                     audioPlayback.src = audioURL;
 
-                    const audioData = await audioBlob.arrayBuffer(); // Convert Blob to ArrayBuffer
-                    const base64Data = btoa(String.fromCharCode(...new Uint8Array(audioData))); // Convert to base64
-                    
-                    // Send data to Lambda function
-                    sendDataToLambda(base64Data);
+                    const reader = new FileReader();
+                    reader.onload = function () {
+                        const base64Data = reader.result.split(',')[1];
+                        sendDataToLambda(base64Data);
+                    }
+                    reader.readAsDataURL(audioBlob);
                 };
 
                 mediaRecorder.start();
@@ -55,6 +59,7 @@
         function stopRecording() {
             if (mediaRecorder && mediaRecorder.state === "recording") {
                 mediaRecorder.stop();
+                audioContext.close(); // Release the audio context
                 startButton.disabled = false;
                 stopButton.disabled = true;
             }
