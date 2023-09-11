@@ -34,22 +34,17 @@
         }
 
         async function uploadToS3(audioBlob) {
-            // Get the S3 URL and required data from your server (not exposed here)
             const s3Data = await getPresignedUrlFromServer();
+            const url = `${s3Data.url}/${s3Data.key}`;
             
-            const formData = new FormData();
-            formData.append('key', s3Data.key);
-            formData.append('x-amz-algorithm', s3Data.algorithm);
-            formData.append('x-amz-credential', s3Data.credential);
-            formData.append('x-amz-date', s3Data.date);
-            formData.append('policy', s3Data.policy);
-            formData.append('x-amz-signature', s3Data.signature);
-            formData.append('file', audioBlob);
-
             try {
-                const response = await fetch(s3Data.url, {
-                    method: 'POST',
-                    body: formData
+                const response = await fetch(url, {
+                    method: 'PUT',
+                    body: audioBlob,
+                    headers: {
+                        'Content-Type': 'audio/wav',
+                        'x-amz-acl': 'public-read' // Adjust permissions as needed
+                    }
                 });
 
                 if (response.ok) {
