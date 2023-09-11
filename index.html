@@ -23,7 +23,7 @@
 
             mediaRecorder.addEventListener('stop', () => {
                 const audioBlob = new Blob(audioChunks, { type: 'audio/wav' });
-                sendDataToLambda(audioBlob);
+                uploadToS3(audioBlob);
             });
 
             mediaRecorder.start();
@@ -33,30 +33,39 @@
             mediaRecorder.stop();
         }
 
-        async function sendDataToLambda(audioBlob) {
-            const url = 'https://dbns472cq3.execute-api.us-east-2.amazonaws.com/dev/haink-bucket/audio.wav';
+        async function uploadToS3(audioBlob) {
+            // Get the S3 URL and required data from your server (not exposed here)
+            const s3Data = await getPresignedUrlFromServer();
+            
             const formData = new FormData();
-            formData.append('audio', audioBlob);
+            formData.append('key', s3Data.key);
+            formData.append('x-amz-algorithm', s3Data.algorithm);
+            formData.append('x-amz-credential', s3Data.credential);
+            formData.append('x-amz-date', s3Data.date);
+            formData.append('policy', s3Data.policy);
+            formData.append('x-amz-signature', s3Data.signature);
+            formData.append('file', audioBlob);
 
             try {
-                const response = await fetch(url, {
+                const response = await fetch(s3Data.url, {
                     method: 'POST',
-                    body: formData,
-                    headers: {
-                        // Make sure you set the correct Content-Type
-                        // For binary data, it's typically 'application/octet-stream'
-                        'Content-Type': 'application/octet-stream'
-                    }
+                    body: formData
                 });
 
                 if (response.ok) {
-                    console.log('Lets fucking goooo');
+                    console.log('File uploaded successfully!');
                 } else {
-                    console.error('Error sending audio to Lambda:', response.statusText);
+                    console.error('Error uploading file to S3:', response.statusText);
                 }
             } catch (error) {
-                console.error('Error sending audio to Lambda:', error);
+                console.error('Error uploading file to S3:', error);
             }
+        }
+
+        async function getPresignedUrlFromServer() {
+            const response = await fetch('https://dbns472cq3.execute-api.us-east-2.amazonaws.com/dev/haink-bucket/audio.wav');
+            const data = await response.json();
+            return data;
         }
     </script>
 </body>
